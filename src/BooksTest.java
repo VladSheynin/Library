@@ -14,20 +14,21 @@ public class BooksTest {
 
     public static void main(String[] args) throws IOException, SQLException {
 
-        //File file = new File("file1");
-        //writeToDisk(file, books);
-        //List<Book> booksRead = readFromDisk(file);
-        //viewAllBooks(books);
-        //readFromPostgres();
-        //Book book1 = getBookInPostgresByName("Сборник сочинений пушкина");
-        //System.out.println(book1);
+        try {
+            //List<Book> booksRead = readFromDisk(file);
+            //viewAllBooks(books);
 
+            Book book1 = getBookByName("Сборник сочинений пушкина");
+            System.out.println(book1);
 
-        //int id = getIDByNameAndAuthor("Сборник сочинений Пушкина", "Пушкин А.С.");
-        //System.out.println(id);
-        //deleteBookByID(id);
+            int id = getIDByNameAndAuthor("Сборник сочинений Пушкина", "Пушкин А.С.");
+            System.out.println(id);
+            //deleteBookByID(id);
 
-        //deleteAllAndCreateDatabase();
+            //deleteAllAndCreateDatabase();
+        } catch (DBException e) {
+            System.out.println(DATABASE_CONNECTION_ERROR);
+        }
 
     }
 
@@ -37,15 +38,19 @@ public class BooksTest {
             connection = DriverManager.getConnection(DB_URL, USER, PASS);
             return true;
         } catch (SQLException e) {
-            System.out.println(DATABASE_CONNECTION_ERROR);
-            e.printStackTrace();
+            //System.out.println(DATABASE_CONNECTION_ERROR + "in connection method");
+            //e.printStackTrace();
             return false;
         }
     }
 
-    public static void addBook(Book book) throws SQLException {
+    public static void addBook(Book book) throws SQLException, DBException {
+        if (!connectToPostgres()) throw new DBException();
+
         if (!connectToPostgres()) {
-            System.out.println(DATABASE_CONNECTION_ERROR);return;}
+            System.out.println(DATABASE_CONNECTION_ERROR);
+            return;
+        }
 
         String sqlRequestText = "INSERT INTO books (name, author, genre, series, \"numberInSeries\", \"yearOfCreate\") VALUES ("
                 + "'" + book.getName() + "','" + book.getAuthor() + "','"
@@ -58,10 +63,13 @@ public class BooksTest {
 
     }
 
-    public static int getIDByNameAndAuthor(String name, String author) throws SQLException {
-        if (!connectToPostgres()) {
-            System.out.println(DATABASE_CONNECTION_ERROR);return -1;}
+    public static int getIDByNameAndAuthor(String name, String author) throws SQLException, DBException {
+        if (!connectToPostgres()) throw new DBException();
 
+        if (!connectToPostgres()) {
+            System.out.println(DATABASE_CONNECTION_ERROR);
+            return -1;
+        }
         int id = 0;
         String sqlRequestText = "SELECT id FROM books WHERE name ='" + name + "' AND author='" + author + "';";
         Statement stmt = connection.createStatement();
@@ -76,9 +84,8 @@ public class BooksTest {
         return id;
     }
 
-    public static Book getBookByName(String bookName) throws SQLException {
-        if (!connectToPostgres()) {
-            System.out.println(DATABASE_CONNECTION_ERROR);return null;}
+    public static Book getBookByName(String bookName) throws SQLException, DBException {
+        if (!connectToPostgres()) throw new DBException();
 
         String sqlRequestText = "SELECT * FROM books";
         Book book = null;
@@ -95,9 +102,8 @@ public class BooksTest {
         return book;
     }
 
-    public static void deleteBookByID(int id) throws SQLException {
-        if (!connectToPostgres()) {
-            System.out.println(DATABASE_CONNECTION_ERROR);return;}
+    public static void deleteBookByID(int id) throws SQLException, DBException {
+        if (!connectToPostgres()) throw new DBException();
 
         String sqlRequestText = "DELETE FROM books WHERE id = " + id + ";";
         Statement stmt = connection.createStatement();
@@ -107,10 +113,9 @@ public class BooksTest {
 
     }
 
-    public static void deleteAllBooks() throws SQLException {
-        if (!connectToPostgres()) {
-            System.out.println(DATABASE_CONNECTION_ERROR);return;}
-        
+    public static void deleteAllBooks() throws SQLException, DBException {
+        if (!connectToPostgres()) throw new DBException();
+
         String sqlRequestText = "DELETE FROM books *;";
         Statement stmt = connection.createStatement();
         stmt.execute(sqlRequestText);
@@ -120,7 +125,7 @@ public class BooksTest {
     }
 
     //очистить и наполнить базу с нуля
-    public static void deleteAllAndCreateDatabase() throws SQLException {
+    public static void deleteAllAndCreateDatabase() throws SQLException, DBException {
         List<Book> books = createBooks();
         deleteAllBooks();
 
