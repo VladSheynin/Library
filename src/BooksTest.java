@@ -1,9 +1,8 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import javax.swing.*;
-import java.io.*;
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class BooksTest {
     static final String DB_URL = "jdbc:postgresql://127.0.0.1:5432/test_library";
@@ -13,14 +12,15 @@ public class BooksTest {
 
     static final String DATABASE_CONNECTION_ERROR = "Не могу подключиться к базе данных";
 
-    static List<Book> books1 = new ArrayList<Book>(); // рабочий список книг в памяти - инициализируется к конструкторе
-    static List<Book> books2 = new ArrayList<Book>(); // второй рабочий список. Нужен что-бы можно было переключаться на время загрузки из базы в память
+    static List<Book> books1 = new ArrayList<>(); // рабочий список книг в памяти - инициализируется к конструкторе
+    static List<Book> books2 = new ArrayList<>(); // второй рабочий список. Нужен что-бы можно было переключаться на время загрузки из базы в память
     static List<Book> alternateBookList = books2; //ссылка на альтернативный список (для загрузки данных из базы)
-    static List<Book> activeBookList = books1; // ссылка на активные список
-
+    static List<Book> activeBookList = books1; // ссылка на активный список
     static final int FIRSTLISTACTIVE = 1;
     static final int SECONDLISTACTIVE = 2;
     static int triggerAlternateList = SECONDLISTACTIVE; //триггер указывающий на актуальный список книг (пока один в работе другой изменяется) (book1 или book2)
+
+    static List<Place> places = new ArrayList<Place>();
 
     //Парадигма: все книги вначале грузится в память - getAllBooks, а потом все операции поиска и фильтрации для клиента происходят уже из памяти
     // (нет необходимости каждый раз мучать базу)
@@ -30,8 +30,7 @@ public class BooksTest {
     // удаления всех книг - deleteAllBooks
     // и посика по ID в базе - getIDByNameAndAuthor
 
-    public static void main(String[] args) throws IOException, SQLException {
-
+    public static void main(String[] args) throws SQLException {
         try {
             // !!! всегда первая операция - не забыть добавить в конструктор для BooksFactory
             getAllBooks();
@@ -40,6 +39,26 @@ public class BooksTest {
             //    System.out.println(book);
             //}
 
+            deleteAllPlaces();
+            createPlaces();
+
+            getAllPlaces();
+            for (Place place : places) {
+                System.out.println(place);
+            }
+
+            /*Integer id = getIdByPlace(new Place(Rooms.LIBRARY, 5, 4,""));
+            if (id != null) System.out.println("ID места " + id);
+            else
+                System.out.println("Место не найдено");
+
+            deletePlaceByID(id);
+            for (Place place : places) {
+                System.out.println(place);
+            }
+            */
+
+            /*
             List<Book> booksByName = getBooksByName("Сборник сочинений пушкина");
             if (booksByName != null) System.out.println(booksByName.toString());
             else
@@ -60,13 +79,15 @@ public class BooksTest {
             else
                 System.out.println("Такой серии нет");
 
-            Map<String,String> seriesAndAuthor = getAllSeries();
+            Map<String, String> seriesAndAuthor = getAllSeries();
             if (seriesAndAuthor != null) System.out.println(seriesAndAuthor.toString());
             else
                 System.out.println("В нашей библиотеке ни одной серии нет");
 
-            int id = getIDByNameAndAuthor("Мы были. Путь  ", "Эльтеррус ");
-            System.out.println(id);
+            Integer id = getIDByNameAndAuthor("Мы были. Путь  2", "Эльтеррус ");
+            if (id != null) System.out.println("ID книги " + id);
+            else
+                System.out.println("В нашей библиотеке такой книги нет"); */
             //deleteBookByID(id);
 
             //deleteAllAndCreateDatabase();
@@ -102,7 +123,6 @@ public class BooksTest {
     }
 
     public static void getAllBooks() throws DBException, SQLException {
-
         Place place;
         if (!connectToPostgres()) throw new DBException();
 
@@ -133,11 +153,6 @@ public class BooksTest {
     public static void addBook(Book book) throws SQLException, DBException {
         if (!connectToPostgres()) throw new DBException();
 
-        if (!connectToPostgres()) {
-            System.out.println(DATABASE_CONNECTION_ERROR);
-            return;
-        }
-
         String sqlRequestText = "INSERT INTO books (name, author, genre, series, \"numberInSeries\", \"yearOfCreate\") VALUES ("
                 + "'" + book.getName() + "','" + book.getAuthor() + "','"
                 + book.getGenre().name() + "','" + book.getSeries() + "',"
@@ -151,10 +166,11 @@ public class BooksTest {
         activeBookList.add(book);
     }
 
-    public static int getIDByNameAndAuthor(String name, String author) throws SQLException, DBException {
+    //возвращает 0 если такой книги нет
+    public static Integer getIDByNameAndAuthor(String name, String author) throws SQLException, DBException {
         if (!connectToPostgres()) throw new DBException();
 
-        int id = 0;
+        Integer id = -1;
         String sqlRequestText = "SELECT id FROM books WHERE name ='" + name.trim() + "' AND author='" + author.trim() + "';";
         Statement stmt = connection.createStatement();
         ResultSet resultSet = stmt.executeQuery(sqlRequestText);
@@ -165,7 +181,8 @@ public class BooksTest {
         resultSet.close();
         stmt.close();
         connection.close();
-        return id;
+        if (id == -1) return null;
+        else return id;
     }
 
     public static void deleteBookByID(int id) throws SQLException, DBException {
@@ -197,7 +214,7 @@ public class BooksTest {
     // если совпадений в поиске нет возвращает null
 
     public static List<Book> getBooksByName(String bookName) {
-        List<Book> resultBooks = new ArrayList<Book>();
+        List<Book> resultBooks = new ArrayList<>();
         for (Book book : activeBookList) {
             if (book.getName().toUpperCase().trim().equals(bookName.toUpperCase().trim()))
                 resultBooks.add(book);
@@ -208,7 +225,7 @@ public class BooksTest {
     }
 
     public static List<Book> getBooksByGenre(Genre genre) {
-        List<Book> books = new ArrayList<Book>();
+        List<Book> books = new ArrayList<>();
         for (Book book : activeBookList) {
             if (book.getGenre() == genre) {
                 books.add(book);
@@ -219,7 +236,7 @@ public class BooksTest {
     }
 
     public static List<Book> getBooksByAuthor(String author) {
-        List<Book> books = new ArrayList<Book>();
+        List<Book> books = new ArrayList<>();
         for (Book book : activeBookList) {
             if (book.getAuthor().toUpperCase().trim().equals(author.toUpperCase().trim())) {
                 books.add(book);
@@ -230,20 +247,17 @@ public class BooksTest {
     }
 
     public static List<Book> getBooksBySeries(String series) {
-        List<Book> books = new ArrayList<Book>();
+        List<Book> books = new ArrayList<>();
         for (Book book : activeBookList) {
             if (book.getSeries().toUpperCase().trim().equals(series.toUpperCase().trim())) {
                 books.add(book);
             }
         }
         if (books.size() != 0)
-            books.sort(new Comparator<Book>() {
-                @Override
-                public int compare(Book o1, Book o2) {
-                    if (o1.getNumberInSeries() > o2.getNumberInSeries()) return 1;
-                    else if (o1.getNumberInSeries() < o2.getNumberInSeries()) return -1;
-                    else return 0;
-                }
+            books.sort((o1, o2) -> {
+                if (o1.getNumberInSeries() > o2.getNumberInSeries()) return 1;
+                else if (o1.getNumberInSeries() < o2.getNumberInSeries()) return -1;
+                else return 0;
             });
         if (books.size() == 0) return null;
         else return books;
@@ -274,10 +288,10 @@ public class BooksTest {
     }
 
     private static List<Book> createBooks() {
-        List<Book> books = new ArrayList<Book>();
+        List<Book> books = new ArrayList<>();
 
-        Place place1 = new Place(3, Rooms.LIBRARY);
-        Place place2 = new Place(3, Rooms.SASHASLEEPING);
+        Place place1 = new Place(Rooms.LIBRARY, 3);
+        Place place2 = new Place(Rooms.SASHASLEEPING, 3);
         Book book;
 
         book = new Book("Мы были. Путь", "Эльтеррус", Genre.FANTASTIC, "Отзвуки серебрянного ветра", 2, 0, place1);
@@ -293,4 +307,103 @@ public class BooksTest {
         books.add(book);
         return books;
     }
+
+
+    //методы работы с Place
+    public static void getAllPlaces() throws DBException, SQLException {
+
+        if (!connectToPostgres()) throw new DBException();
+
+        //если база была уже наполнена - очищаем перед новым наполнением (считаем что на диске - эталон)
+        if (places.size() != 0) places.clear();
+
+        String sqlRequestText = "SELECT * FROM places ;";
+        Statement stmt = connection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(sqlRequestText);
+        while (resultSet.next()) {
+            places.add(new Place(Rooms.valueOf(resultSet.getString(2)),
+                    resultSet.getInt(3),
+                    resultSet.getInt(4),
+                    resultSet.getString(5)));
+        }
+        stmt.execute(sqlRequestText);
+        stmt.close();
+        connection.close();
+    }
+
+    private static void addPlace(Place place) throws DBException, SQLException {
+        if (!connectToPostgres()) throw new DBException();
+        String sqlRequestText = "INSERT INTO places (room, numberbookcase, numberbookshelf, comment) VALUES ("
+                + "'" + place.getRoom().name() + "','" + place.getNumberOfBookcase() + "','"
+                + place.getNumberBookshelf() + "','" + place.getComment() + "');";
+        Statement stmt = connection.createStatement();
+        stmt.execute(sqlRequestText);
+        stmt.close();
+        connection.close();
+
+    }
+
+    public static Integer getIdByPlace(Place place) throws DBException, SQLException {
+        if (!connectToPostgres()) throw new DBException();
+
+        Integer id = -1;
+        String sqlRequestText = "SELECT id FROM places WHERE room ='" +
+                place.getRoom().name().trim() +
+                "' AND numberbookcase=" + place.getNumberOfBookcase() +
+                " AND numberbookshelf=" + place.getNumberBookshelf() +
+                ";";
+
+        Statement stmt = connection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(sqlRequestText);
+        while (resultSet.next()) {
+            id = Integer.valueOf(resultSet.getString(1));
+            break;
+        }
+        resultSet.close();
+        stmt.close();
+        connection.close();
+        if (id == -1) return null;
+        else return id;
+    }
+
+    public static void deletePlaceByID(int id) throws SQLException, DBException {
+        if (!connectToPostgres()) throw new DBException();
+
+        String sqlRequestText = "DELETE FROM places WHERE id = " + id + ";";
+        Statement stmt = connection.createStatement();
+        stmt.execute(sqlRequestText);
+        stmt.close();
+        connection.close();
+
+        //обновляем список после любых изменений вносимых в базу
+        getAllPlaces();
+    }
+
+    public static void deleteAllPlaces() throws DBException, SQLException {
+        if (!connectToPostgres()) throw new DBException();
+        String sqlRequestText = "DELETE FROM places *;";
+        Statement stmt = connection.createStatement();
+        stmt.execute(sqlRequestText);
+        stmt.close();
+        connection.close();
+    }
+
+    // технический метод для первоначального создания Places
+    private static void createPlaces() throws DBException, SQLException {
+        Place[] newPlaces = new Place[10];
+        newPlaces[0] = new Place(Rooms.LIBRARY, 5, 1, "Нижняя полка крайнего правого шкафа");
+        newPlaces[1] = new Place(Rooms.LIBRARY, 5, 2, "Вторая снизу полка крайнего правого шкафа");
+        newPlaces[2] = new Place(Rooms.LIBRARY, 5, 3, "Третья снизу полка крайнего правого шкафа");
+        newPlaces[3] = new Place(Rooms.LIBRARY, 5, 4, "Четвертая снизу полка крайнего правого шкафа");
+        newPlaces[4] = new Place(Rooms.LIBRARY, 5, 5, "Пятая снизу полка крайнего правого шкафа");
+        newPlaces[5] = new Place(Rooms.LIBRARY, 5, 6, "Шестая снизу полка крайнего правого шкафа");
+        newPlaces[6] = new Place(Rooms.LIBRARY, 5, 7, "Седьмая снизу полка крайнего правого шкафа");
+        newPlaces[7] = new Place(Rooms.LIBRARY, 4, 1, "Полка над дверью");
+        newPlaces[8] = new Place(Rooms.UNKNOWN, 0, 0, "Местоположение неизвестно");
+        for (Place place : newPlaces) {
+            if (place != null) addPlace(place);
+        }
+    }
+
+
 }
