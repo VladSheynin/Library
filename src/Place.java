@@ -8,6 +8,10 @@ public class Place {
         this.room = room;
     }
 
+    public Place(Rooms room) {
+        this.room = room;
+    }
+
     public int getNumberBookshelf() {
         return numberBookshelf;
     }
@@ -19,10 +23,12 @@ public class Place {
     @Override
     public String toString() {
         String ret;
-        ret = "Местоположение " + room + ", номер шкафа=" + numberOfBookcase;
+        if (room == Rooms.UNKNOWN)
+            ret = Rooms.UNKNOWN.inRussian;
+        else
+            ret = "Местоположение: " + room + ", номер шкафа=" + numberOfBookcase;
         if (numberBookshelf != 0)
             ret = ret + ", номер полки=" + numberBookshelf;
-
         return ret;
     }
 }

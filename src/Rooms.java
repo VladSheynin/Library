@@ -4,7 +4,8 @@ public enum Rooms {
     PARENTSSLEEPING("Родительская спальня"),
     LIBRARY("Библиотека"),
     KITCHEN("Кухня"),
-    OUTOFHOME("Вне дома");
+    OUTOFHOME("Вне дома"),
+    UNKNOWN("Местоположение неизвестно");
 
     String inRussian;
 

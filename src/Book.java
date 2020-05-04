@@ -11,16 +11,26 @@ public class Book implements Serializable {
 
     private Place place;
 
-    public Book(String name, String author, Genre genre) {
-        this.name = name;
-        this.author = author;
-        this.genre = genre;
-    }
+    /*    public Book(String name, String author, Genre genre) {
+            this.name = name;
+            this.author = author;
+            this.genre = genre;
+        }
 
-    public Book(String name, String author, Genre genre, Place place) {
+        public Book(String name, String author, Genre genre, Place place) {
+            this.name = name;
+            this.author = author;
+            this.genre = genre;
+            this.place = place;
+        }
+    */
+    public Book(String name, String author, Genre genre, String series, int numberInSeries, int yearOfCreate, Place place) {
         this.name = name;
         this.author = author;
         this.genre = genre;
+        this.series = series;
+        this.numberInSeries = numberInSeries;
+        this.yearOfCreate = yearOfCreate;
         this.place = place;
     }
 
@@ -88,6 +98,8 @@ public class Book implements Serializable {
 
         if (!"".equals(series))
             ret = ret + ", серия='" + series + '\'' + "(" + numberInSeries + ")";
+        if (place != null)
+            ret = ret +" "+ place;
         return ret;
     }
 }
