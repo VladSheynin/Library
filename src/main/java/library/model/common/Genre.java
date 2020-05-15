@@ -1,3 +1,5 @@
+package library.model.common;
+
 public enum Genre {
     FANTASTIC("Фантастика"),
     DETECTIVE("Детектив"),
@@ -15,7 +17,4 @@ public enum Genre {
     public String toString() {
         return inRussian;
     }
-
-
-
 }

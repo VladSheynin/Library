@@ -1,4 +1,6 @@
-public enum Rooms {
+package library.model.common;
+
+public enum RoomType {
     KATESLEEPING("Катина спальня"),
     SASHASLEEPING("Сашина спальня"),
     PARENTSSLEEPING("Родительская спальня"),
@@ -9,7 +11,7 @@ public enum Rooms {
 
     String inRussian;
 
-    Rooms(String inRussian) {
+    RoomType(String inRussian) {
         this.inRussian = inRussian;
     }
 
